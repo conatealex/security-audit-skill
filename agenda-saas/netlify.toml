@@ -1,0 +1,28 @@
+# Este arquivo serve apenas para deixar o problema explícito.
+#
+# A Aurora é um servidor Node.js + PostgreSQL: publicar só o front em um serviço
+# estático deixa as telas funcionando e a API inexistente — criar conta, entrar
+# e agendar não funcionam. O app agora avisa isso na tela em vez de dizer
+# "Não foi possível conectar".
+#
+# Para publicar de verdade siga o DEPLOY.md (Render, Railway, Fly.io ou VPS com
+# docker-compose). Se quiser mesmo usar a Netlify como vitrine, aponte /api para
+# um servidor real trocando o bloco abaixo por um proxy:
+
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+
+# Proxy para uma API real (descomente e ajuste o domínio):
+# [[redirects]]
+#   from = "/api/*"
+#   to = "https://sua-api.exemplo.com/api/:splat"
+#   status = 200
+#   force = true

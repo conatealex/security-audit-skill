@@ -1,0 +1,34 @@
+# Ajuste o nome do app. O banco é o Postgres gerenciado da Fly:
+#   fly launch --no-deploy
+#   fly postgres create --name aurora-db --region gru
+#   fly postgres attach aurora-db          # cria o segredo DATABASE_URL
+#   fly secrets set DATA_ENCRYPTION_KEY=... APP_ORIGIN=https://SEU-APP.fly.dev
+#   fly deploy
+app = "aurora-agenda"
+primary_region = "gru"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  NODE_ENV = "production"
+  PORT = "3000"
+  WHATSAPP_MODE = "disabled"
+
+[http_service]
+  internal_port = 3000
+  force_https = true
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 1
+
+  [[http_service.checks]]
+    method = "GET"
+    path = "/api/ready"
+    interval = "30s"
+    timeout = "5s"
+    grace_period = "60s"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"

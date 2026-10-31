@@ -1,0 +1,38 @@
+# Blueprint do Render: app Docker + PostgreSQL gerenciado no mesmo plano.
+# Depois do primeiro deploy, configure META_APP_SECRET e META_WEBHOOK_VERIFY_TOKEN
+# no painel (sync: false) apenas se for usar envio real de WhatsApp.
+databases:
+  - name: aurora-db
+    databaseName: aurora
+    user: aurora
+    plan: basic-256mb
+    region: oregon
+    postgresMajorVersion: "17"
+
+services:
+  - type: web
+    name: aurora-agenda
+    runtime: docker
+    plan: starter
+    region: oregon
+    healthCheckPath: /api/ready
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: WHATSAPP_MODE
+        value: disabled
+      - key: DATABASE_URL
+        fromDatabase:
+          name: aurora-db
+          property: connectionString
+      - key: DATA_ENCRYPTION_KEY
+        generateValue: true
+      - key: APP_ORIGIN
+        sync: false
+      - key: ALLOW_REGISTRATION
+        value: "false"
+      - key: META_APP_SECRET
+        sync: false
+      - key: META_WEBHOOK_VERIFY_TOKEN
+        sync: false

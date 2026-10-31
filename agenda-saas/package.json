@@ -1,0 +1,39 @@
+{
+  "name": "aurora-agenda-saas",
+  "version": "1.1.1",
+  "private": true,
+  "type": "module",
+  "description": "Agenda inteligente multi-profissional com bloqueio transacional e WhatsApp oficial",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "node --env-file-if-exists=.env server/index.js --dev",
+    "start": "node --env-file-if-exists=.env server/index.js",
+    "build": "vite build",
+    "test": "node --test tests/*.test.js",
+    "seed": "node --env-file-if-exists=.env server/seed.js",
+    "check": "npm run test && npm run build",
+    "migrate": "node --env-file-if-exists=.env server/migrate-cli.js",
+    "migrate:status": "node --env-file-if-exists=.env server/migrate-cli.js --status",
+    "test:postgres": "node --test tests/postgres.test.js"
+  },
+  "dependencies": {
+    "@electric-sql/pglite": "^0.5.13",
+    "express": "^5.3.0",
+    "express-rate-limit": "^8.3.0",
+    "helmet": "^8.1.0",
+    "lucide-react": "^0.577.0",
+    "pg": "^8.23.1",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "react-router-dom": "^7.13.1",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite-socket": "^0.2.16",
+    "@vitejs/plugin-react": "^5.1.4",
+    "supertest": "^7.2.2",
+    "vite": "^7.3.1"
+  }
+}
