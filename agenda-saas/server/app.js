@@ -139,7 +139,24 @@ export function createApp(db, { dev = false } = {}) {
   const app = express();
   const requireAuth = (req, res, next) => authenticate(db, req, res, next);
   app.disable("x-powered-by");
-  app.set("trust proxy", false);
+  // Em hospedagem serverless não existe socket: sem isso req.ip fica indefinido
+  // e o limitador de requisições recusa a chamada. O IP vem do cabeçalho que a
+  // plataforma injeta (Netlify envia x-nf-client-connection-ip).
+  app.set("trust proxy", process.env.TRUST_PROXY === "true" ? 1 : false);
+  app.use((req, res, next) => {
+    if (!req.ip) {
+      const raw =
+        req.get("x-nf-client-connection-ip") ||
+        req.get("x-forwarded-for") ||
+        req.socket?.remoteAddress ||
+        "0.0.0.0";
+      Object.defineProperty(req, "ip", {
+        value: String(raw).split(",")[0].trim() || "0.0.0.0",
+        configurable: true,
+      });
+    }
+    next();
+  });
   app.use((req, res, next) => {
     const incoming = req.get("x-request-id");
     const requestId =

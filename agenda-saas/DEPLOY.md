@@ -2,6 +2,8 @@
 
 Esta é uma aplicação **Node.js com servidor próprio**: entrega o site e a API no mesmo endereço e guarda os dados em **PostgreSQL gerenciado**. Precisa de uma hospedagem que execute Node (Render, Railway, Fly.io, VPS) **e** de um PostgreSQL (o do próprio provedor, Neon, Supabase, RDS…).
 
+> **Usa Netlify?** Há um caminho completo (site + Functions + PostgreSQL Neon) em [`NETLIFY.md`](NETLIFY.md).
+>
 > **Netlify/Vercel sem servidor não serve para o sistema completo.** O envio por arrastar-e-soltar publica apenas arquivos estáticos: a página abre, mas ninguém consegue criar conta, entrar, agendar, confirmar ou receber lembretes, porque a API não existe nesse tipo de hospedagem.
 >
 > **Sintoma:** a tela de cadastro abre normalmente, o botão **Criar meu espaço** responde "Não foi possível conectar. Tente novamente." ou exibe a faixa *"A API deste sistema não está respondendo neste endereço"*. Isso não é bug de validação: o `POST /api/auth/register` foi entregue ao servidor estático, que devolveu a própria página HTML em vez de JSON. A conferência leva 2 segundos:
@@ -237,5 +239,5 @@ pg_restore --clean --if-exists --no-owner -d "$DATABASE_URL" aurora-2026-10-29.d
 - `dist/` compilado — não é necessário rodar o build no servidor.
 - `server/` (API, regras, fila, segurança), `server/migrations/` (esquema versionado) e `server/migrate-cli.js`.
 - `Dockerfile`, `docker-compose.yml`, `render.yaml`, `fly.toml`, `.env.example`.
-- `tests/` com 73 verificações, incluindo **PostgreSQL real pelo driver `pg`**, migrações e a fila (retry, dead-letter, entrega ambígua).
+- `tests/` com 78 verificações, incluindo **PostgreSQL real pelo driver `pg`**, migrações e a fila (retry, dead-letter, entrega ambígua).
 - Sem `node_modules`, sem banco local, sem chave de criptografia e sem dados de demonstração.

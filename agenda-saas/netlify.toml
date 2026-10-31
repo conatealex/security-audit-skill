@@ -1,17 +1,35 @@
-# Este arquivo serve apenas para deixar o problema explícito.
+# Deploy da Aurora no Netlify (site estático + Functions + PostgreSQL)
 #
-# A Aurora é um servidor Node.js + PostgreSQL: publicar só o front em um serviço
-# estático deixa as telas funcionando e a API inexistente — criar conta, entrar
-# e agendar não funcionam. O app agora avisa isso na tela em vez de dizer
-# "Não foi possível conectar".
-#
-# Para publicar de verdade siga o DEPLOY.md (Render, Railway, Fly.io ou VPS com
-# docker-compose). Se quiser mesmo usar a Netlify como vitrine, aponte /api para
-# um servidor real trocando o bloco abaixo por um proxy:
+# Aviso importante: arrastar apenas a pasta dist/ publica o site, mas NÃO cria
+# o servidor. Para o cadastro funcionar, o site precisa de:
+#   1. estas Functions (rodam a API);
+#   2. um PostgreSQL informado em DATABASE_URL.
+# O passo a passo está em NETLIFY.md.
 
 [build]
   command = "npm run build"
   publish = "dist"
+  functions = "netlify/functions"
+
+[functions]
+  node_bundler = "esbuild"
+  # PGlite (30 MB de WASM) só é usado em desenvolvimento local; nunca no Netlify.
+  external_node_modules = ["@electric-sql/pglite", "@electric-sql/pglite-socket"]
+  # As migrações são lidas do disco em tempo de execução.
+  included_files = ["server/migrations/*.sql"]
+
+# Toda chamada /api/* vai para a função que roda o Express.
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/api/:splat"
+  status = 200
+  force = true
+  # O cookie de sessão e o CSRF exigem a mesma origem — nada de proxy externo.
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
 
 [[headers]]
   for = "/*"
@@ -19,10 +37,15 @@
     X-Frame-Options = "DENY"
     X-Content-Type-Options = "nosniff"
     Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "camera=(), microphone=(), geolocation=()"
 
-# Proxy para uma API real (descomente e ajuste o domínio):
-# [[redirects]]
-#   from = "/api/*"
-#   to = "https://sua-api.exemplo.com/api/:splat"
-#   status = 200
-#   force = true
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+# A API nunca deve ser cacheada pelo CDN.
+[[headers]]
+  for = "/api/*"
+  [headers.values]
+    Cache-Control = "no-store"

@@ -6,7 +6,8 @@ SaaS de agendamento multi-profissional: o cliente escolhe data e horário, o hor
 
 ## Publicar
 
-Guia completo em [`DEPLOY.md`](DEPLOY.md). Resumo: repositório no GitHub → **Render → New → Blueprint** (o `render.yaml` cria o serviço e o PostgreSQL juntos, com healthcheck em `/api/ready`) → preencher `APP_ORIGIN` e, se quiser e-mail de redefinição, `SMTP_URL`.
+- **Netlify** (site + Functions + PostgreSQL Neon): passo a passo em [`NETLIFY.md`](NETLIFY.md).
+- Servidor dedicado: guia completo em [`DEPLOY.md`](DEPLOY.md). Resumo: repositório no GitHub → **Render → New → Blueprint** (o `render.yaml` cria o serviço e o PostgreSQL juntos, com healthcheck em `/api/ready`) → preencher `APP_ORIGIN` e, se quiser e-mail de redefinição, `SMTP_URL`.
 
 ## Como rodar
 
@@ -37,7 +38,7 @@ APP_ORIGIN="https://agenda.suaclinica.com.br" \
 npm start
 ```
 
-Testes (73 verificações: regras, segurança, PostgreSQL real, migrações e fila):
+Testes (78 verificações: regras, segurança, PostgreSQL real, migrações e fila):
 
 ```bash
 npm test
@@ -142,6 +143,7 @@ server/migrate.js        migrações sob trava, com checksum
 server/migrations/       esquema versionado (0001 baseline, 0002 confiabilidade)
 server/logger.js         log JSON estruturado e log de acesso
 server/index.js          boot, validação de ambiente, worker e shutdown gracioso
+netlify/functions/       API e worker em Netlify Functions (serverless)
 src/App.jsx              painel, agenda pública, acompanhamento e privacidade
 tests/agenda.test.js     bloqueio, isolamento, permissões
 tests/postgres.test.js   driver pg contra PostgreSQL real

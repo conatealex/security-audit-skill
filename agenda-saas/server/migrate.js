@@ -1,7 +1,37 @@
 import { createHash } from "node:crypto";
-import { readdir, readFile } from "node:fs/promises";
+import { readdir, readFile, access } from "node:fs/promises";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
-const DIRECTORY = new URL("./migrations/", import.meta.url);
+/**
+ * Localiza a pasta de migrações. Em servidor comum ela fica ao lado deste
+ * arquivo; em ambientes empacotados (Netlify Functions) o código é reunido em
+ * outro diretório, então procuramos também a partir da raiz de trabalho.
+ */
+let directory;
+async function migrationDirectory() {
+  if (directory) return directory;
+  const candidates = [];
+  if (process.env.MIGRATIONS_DIR) candidates.push(process.env.MIGRATIONS_DIR);
+  try {
+    candidates.push(fileURLToPath(new URL("./migrations/", import.meta.url)));
+  } catch {
+    // Ambiente empacotado sem import.meta (bundle CommonJS).
+  }
+  candidates.push(path.join(process.cwd(), "server", "migrations"));
+  candidates.push(path.join(process.cwd(), "migrations"));
+  for (const candidate of candidates) {
+    try {
+      await access(path.join(candidate, "0001_baseline.sql").replace(/\/+$/, ""));
+      directory = candidate;
+      return directory;
+    } catch {
+      // tenta o próximo
+    }
+  }
+  directory = candidates[0];
+  throw new Error(`Pasta de migrações não encontrada (procurado em: ${candidates.join(", ")})`);
+}
 const LOCK_KEY = "aurora:schema-migrations";
 
 async function lock(db) {
@@ -29,7 +59,8 @@ export async function migrationStatus(db) {
         "SELECT version, checksum FROM schema_migrations ORDER BY version",
       )
     : { rows: [] };
-  const files = (await readdir(DIRECTORY))
+  const directory = await migrationDirectory();
+  const files = (await readdir(directory))
     .filter((f) => f.endsWith(".sql"))
     .sort();
   const applied = new Map(
@@ -38,7 +69,7 @@ export async function migrationStatus(db) {
   const pending = [];
   const changed = [];
   for (const file of files) {
-    const sql = await readFile(new URL(file, DIRECTORY), "utf8");
+    const sql = await readFile(path.join(await migrationDirectory(), file), "utf8");
     const checksum = createHash("sha256").update(sql).digest("hex");
     if (!applied.has(file)) pending.push(file);
     else if (applied.get(file) !== checksum) changed.push(file);
@@ -82,7 +113,7 @@ export async function migrate(db, { log = () => {} } = {}) {
       );
     }
     for (const version of status.pending) {
-      const sql = await readFile(new URL(version, DIRECTORY), "utf8");
+      const sql = await readFile(path.join(await migrationDirectory(), version), "utf8");
       const checksum = createHash("sha256").update(sql).digest("hex");
       const started = Date.now();
       // DDL + registro na mesma transação: ou a migração inteira vale, ou nada muda.

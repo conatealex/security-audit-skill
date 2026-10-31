@@ -1,5 +1,3 @@
-import { PGlite } from "@electric-sql/pglite";
-import { btree_gist } from "@electric-sql/pglite/contrib/btree_gist";
 import { mkdir } from "node:fs/promises";
 import path from "node:path";
 import { migrate } from "./migrate.js";
@@ -116,6 +114,10 @@ async function createPostgres(
 }
 
 async function createPglite(location, { migrate: runMigrations = true } = {}) {
+  // Import tardio: em produção (PostgreSQL) o PGlite/WASM nunca é carregado, e
+  // empacotadores serverless não incluem 30 MB de binário à toa.
+  const { PGlite } = await import("@electric-sql/pglite");
+  const { btree_gist } = await import("@electric-sql/pglite/contrib/btree_gist");
   if (location !== ":memory:")
     await mkdir(path.dirname(path.resolve(location)), {
       recursive: true,
