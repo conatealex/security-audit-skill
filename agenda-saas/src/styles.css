@@ -4621,3 +4621,28 @@ td small {
     font-size: 0.8rem;
   }
 }
+
+/* Páginas de acesso simples (esqueci a senha / redefinir). */
+.auth-page-simple {
+  grid-template-columns: 1fr;
+  background: var(--paper, #f7faf8);
+}
+.auth-page-simple .auth-main {
+  min-height: 100dvh;
+  justify-content: center;
+}
+.auth-page-simple .auth-form-wrap {
+  margin: 0 auto;
+}
+.auth-forgot {
+  margin-top: -6px;
+  font-size: 0.86rem;
+}
+.auth-forgot a {
+  color: var(--brand, #167d72);
+  font-weight: 600;
+  text-decoration: none;
+}
+.auth-forgot a:hover {
+  text-decoration: underline;
+}

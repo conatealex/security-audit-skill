@@ -300,6 +300,8 @@ export default function App() {
         )}
         <Routes>
           <Route path="/entrar" element={<Login />} />
+          <Route path="/esqueci-senha" element={<ForgotPassword />} />
+          <Route path="/redefinir" element={<ResetPassword />} />
           <Route path="/criar-conta" element={<Login register />} />
           <Route path="/agendar/:slug" element={<PublicBooking />} />
           <Route path="/acompanhar" element={<ClientLookup />} />
@@ -521,6 +523,11 @@ function Login({ register = false }) {
               )}
             </button>
           </form>
+          {!register && (
+            <p className="auth-switch auth-forgot">
+              <Link to="/esqueci-senha">Esqueci minha senha</Link>
+            </p>
+          )}
           <p className="auth-switch">
             {register ? "Já tem uma conta?" : "Ainda não tem uma conta?"}{" "}
             <Link to={register ? "/entrar" : "/criar-conta"}>
@@ -1768,6 +1775,223 @@ function RevokeMessaging({ id, onDone }) {
     </button>
   );
 }
+function AuthShell({ eyebrow, title, subtitle, children }) {
+  return (
+    <div className="auth-page auth-page-simple">
+      <main className="auth-main">
+        <div className="auth-form-wrap">
+          <Brand />
+          <span className="eyebrow">{eyebrow}</span>
+          <h2>{title}</h2>
+          <p className="muted">{subtitle}</p>
+          {children}
+        </div>
+        <p className="auth-bottom">
+          Feito para quem cuida de pessoas. <Flower2 size={15} />
+        </p>
+      </main>
+    </div>
+  );
+}
+
+function ForgotPassword() {
+  const [busy, setBusy] = useState(false),
+    [error, setError] = useState(null),
+    [sent, setSent] = useState(false);
+  async function submit(e) {
+    e.preventDefault();
+    setBusy(true);
+    setError(null);
+    const f = new FormData(e.currentTarget);
+    try {
+      await api("/auth/forgot", {
+        method: "POST",
+        body: { email: f.get("email") },
+      });
+      setSent(true);
+    } catch (e) {
+      setError(e);
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <AuthShell
+      eyebrow="RECUPERAR ACESSO"
+      title="Vamos devolver sua agenda."
+      subtitle="Informe o e-mail da sua conta e enviamos um link para criar uma nova senha."
+    >
+      <ErrorBox error={error} />
+      {sent ? (
+        <>
+          <div className="notice notice-info" role="status">
+            <Mail size={18} />
+            <span>
+              Se este e-mail tiver conta, o link chegou em instantes. Ele vale
+              por 30 minutos e só pode ser usado uma vez. Confira também a caixa
+              de spam.
+            </span>
+          </div>
+          <p className="auth-switch">
+            <Link to="/entrar">Voltar para o login</Link>
+          </p>
+        </>
+      ) : (
+        <form onSubmit={submit} className="stack-form">
+          <label>
+            E-mail
+            <div className="input-icon">
+              <Mail size={17} />
+              <input
+                name="email"
+                type="email"
+                required
+                placeholder="voce@suaclinica.com.br"
+                autoComplete="email"
+              />
+            </div>
+          </label>
+          <button className="btn btn-primary btn-full" disabled={busy}>
+            {busy ? (
+              <LoaderCircle className="spin" size={18} />
+            ) : (
+              <>
+                Enviar link <ArrowRight size={18} />
+              </>
+            )}
+          </button>
+          <p className="auth-switch">
+            <Link to="/entrar">Voltar para o login</Link>
+          </p>
+        </form>
+      )}
+    </AuthShell>
+  );
+}
+
+function ResetPassword() {
+  const navigate = useNavigate();
+  const token = window.location.hash.slice(1);
+  const [state, setState] = useState({
+      loading: Boolean(token),
+      valid: false,
+      reason: null,
+      email: "",
+    }),
+    [busy, setBusy] = useState(false),
+    [error, setError] = useState(null),
+    [show, setShow] = useState(false);
+  useEffect(() => {
+    if (!token) return;
+    api("/auth/reset/inspect", { method: "POST", body: { token } })
+      .then((d) => setState({ loading: false, ...d }))
+      .catch((e) =>
+        setState({
+          loading: false,
+          valid: false,
+          reason: e.code || "invalid",
+          email: "",
+        }),
+      );
+  }, [token]);
+  async function submit(e) {
+    e.preventDefault();
+    setBusy(true);
+    setError(null);
+    const f = new FormData(e.currentTarget);
+    try {
+      await api("/auth/reset", {
+        method: "POST",
+        body: { token, password: f.get("password") },
+      });
+      navigate("/entrar?redefinida=1");
+    } catch (e) {
+      setError(e);
+    } finally {
+      setBusy(false);
+    }
+  }
+  const invalidMessage =
+    {
+      used: "Este link já foi utilizado. Peça um novo.",
+      expired: "Este link expirou. Peça um novo.",
+    }[state.reason] || "Este link não é válido. Peça um novo.";
+  if (!token)
+    return (
+      <AuthShell
+        eyebrow="LINK INVÁLIDO"
+        title="Falta o código do link."
+        subtitle="Abra o endereço completo que chegou no seu e-mail — o código vem depois do #."
+      >
+        <p className="auth-switch">
+          <Link to="/esqueci-senha">Pedir um novo link</Link>
+        </p>
+      </AuthShell>
+    );
+  return (
+    <AuthShell
+      eyebrow="NOVA SENHA"
+      title="Escolha uma nova senha."
+      subtitle={
+        state.valid
+          ? `Conta ${state.email}. Ao salvar, todas as sessões abertas serão encerradas.`
+          : "Valide o link para continuar."
+      }
+    >
+      <ErrorBox error={error} />
+      {state.loading ? (
+        <p className="muted">
+          <LoaderCircle className="spin" size={18} /> Verificando o link…
+        </p>
+      ) : !state.valid ? (
+        <>
+          <div className="notice notice-error" role="alert">
+            <CircleAlert size={18} />
+            <span>{invalidMessage}</span>
+          </div>
+          <p className="auth-switch">
+            <Link to="/esqueci-senha">Pedir um novo link</Link>
+          </p>
+        </>
+      ) : (
+        <form onSubmit={submit} className="stack-form">
+          <label>
+            Nova senha
+            <div className="input-icon">
+              <LockKeyhole size={17} />
+              <input
+                name="password"
+                type={show ? "text" : "password"}
+                required
+                minLength={12}
+                maxLength={128}
+                placeholder="Pelo menos 12 caracteres"
+                autoComplete="new-password"
+              />
+              <button
+                type="button"
+                onClick={() => setShow(!show)}
+                aria-label={show ? "Ocultar senha" : "Mostrar senha"}
+              >
+                {show ? <EyeOff size={17} /> : <Eye size={17} />}
+              </button>
+            </div>
+          </label>
+          <button className="btn btn-primary btn-full" disabled={busy}>
+            {busy ? (
+              <LoaderCircle className="spin" size={18} />
+            ) : (
+              <>
+                Salvar nova senha <ArrowRight size={18} />
+              </>
+            )}
+          </button>
+        </form>
+      )}
+    </AuthShell>
+  );
+}
+
 function AcceptInvite() {
   const { refreshAuth } = useAuth(),
     navigate = useNavigate();

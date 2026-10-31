@@ -1,6 +1,6 @@
 {
   "name": "aurora-agenda-saas",
-  "version": "1.1.1",
+  "version": "1.2.0",
   "private": true,
   "type": "module",
   "description": "Agenda inteligente multi-profissional com bloqueio transacional e WhatsApp oficial",
@@ -24,6 +24,7 @@
     "express-rate-limit": "^8.3.0",
     "helmet": "^8.1.0",
     "lucide-react": "^0.577.0",
+    "nodemailer": "^7.0.9",
     "pg": "^8.23.1",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
@@ -33,6 +34,8 @@
   "devDependencies": {
     "@electric-sql/pglite-socket": "^0.2.16",
     "@vitejs/plugin-react": "^5.1.4",
+    "mailparser": "^3.7.4",
+    "smtp-server": "^3.16.1",
     "supertest": "^7.2.2",
     "vite": "^7.3.1"
   }

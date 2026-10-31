@@ -4,6 +4,10 @@ SaaS de agendamento multi-profissional: o cliente escolhe data e horário, o hor
 
 > Pronta para publicar com **PostgreSQL gerenciado**. O envio real de WhatsApp fica desligado por padrão (`WHATSAPP_MODE=disabled`) e a demonstração usa somente dados fictícios. Guia de publicação: [`DEPLOY.md`](DEPLOY.md).
 
+## Publicar
+
+Guia completo em [`DEPLOY.md`](DEPLOY.md). Resumo: repositório no GitHub → **Render → New → Blueprint** (o `render.yaml` cria o serviço e o PostgreSQL juntos, com healthcheck em `/api/ready`) → preencher `APP_ORIGIN` e, se quiser e-mail de redefinição, `SMTP_URL`.
+
 ## Como rodar
 
 ```bash
@@ -33,7 +37,7 @@ APP_ORIGIN="https://agenda.suaclinica.com.br" \
 npm start
 ```
 
-Testes (64 verificações: regras, segurança, PostgreSQL real, migrações e fila):
+Testes (73 verificações: regras, segurança, PostgreSQL real, migrações e fila):
 
 ```bash
 npm test
@@ -57,6 +61,7 @@ npm run check           # testes + build
 - **Isolamento por clínica**: toda consulta filtra `tenant_id`; profissional só vê a própria agenda; configuração de WhatsApp e auditoria são exclusivas do administrador.
 - **Autenticação**: senha com `scrypt`, sessão em cookie `HttpOnly`/`SameSite=Lax` (e `Secure` + prefixo `__Host-` em produção), token de sessão guardado como hash, validade de 8 horas, CSRF obrigatório em toda escrita.
 - **Convites individuais**: o profissional convidado cria o próprio acesso por link de uso único com validade de 48 horas.
+- **Redefinição de senha**: link de uso único com validade de 30 minutos, guardado como hash SHA-256, enviado por SMTP. Pedir um link novo invalida o anterior; concluir a troca derruba **todas** as sessões da conta. A resposta é idêntica exista ou não o e-mail (não permite descobrir quem tem cadastro) e contas técnicas sem senha real nunca recebem link.
 - **Token da Meta**: cifrado com AES-256-GCM usando `DATA_ENCRYPTION_KEY`; nunca é devolvido ao navegador.
 - **Webhook**: assinatura HMAC SHA-256 verificada antes de qualquer processamento.
 - **Fila à prova de falha**: `FOR UPDATE SKIP LOCKED` garante que dois workers não pegam o mesmo job. Cada job tem `max_attempts` (5); 429/408 voltam para a fila com **backoff exponencial + jitter** (até 1 h) e, esgotadas as tentativas, viram `dead` (dead-letter). Erro 5xx, timeout ou processo interrompido no meio do envio viram `unknown` — **nunca** reenvio cego. Lembrete atrasado, consulta cancelada ou consentimento retirado viram `skipped` sem chamar a Meta.
@@ -68,6 +73,14 @@ npm run check           # testes + build
 - **Limites**: teto global por IP, limites de banco para login, reservas, consulta por link e convites.
 - **Cabeçalhos**: CSP restritiva sem `unsafe-inline` em scripts, `frame-ancestors 'none'`, `no-store` na API, HSTS.
 - **Dados sensíveis**: as mensagens carregam apenas nome, profissional, data, horário e clínica — nunca o motivo clínico.
+
+## Redefinição de senha
+
+1. O usuário abre `/esqueci-senha`, informa o e-mail e recebe um link `/redefinir#<token>`.
+2. O link vale **30 minutos** e só pode ser usado **uma vez**; pedir outro invalida o primeiro.
+3. Ao salvar a nova senha (mínimo 12 caracteres) todas as sessões abertas daquela conta são encerradas.
+
+Configure `SMTP_URL` e `MAIL_FROM` para o envio real. Sem SMTP o sistema continua funcionando, mas nenhum e-mail sai: em desenvolvimento o link aparece no terminal; em produção o pedido fica registrado no log como `mail.not_configured`. Não existe e-mail de marketing nem verificação de endereço — apenas redefinição.
 
 ## WhatsApp: o que falta para enviar de verdade
 

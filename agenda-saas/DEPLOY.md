@@ -28,9 +28,30 @@ O PGlite continua existindo apenas como atalho de **desenvolvimento local** (sem
 
 ---
 
+## Passo 0 — colocar o código no seu GitHub
+
+O deploy da Render, Railway e Fly parte de um repositório. Duas formas:
+
+**A) Pelo Git (recomendado, preserva histórico e o CI incluído)**
+
+```bash
+git clone aurora-agenda-repo.bundle aurora-agenda
+cd aurora-agenda
+git remote set-url origin https://github.com/SEU-USUARIO/aurora-agenda.git
+git push -u origin main
+```
+
+Crie antes o repositório vazio em **GitHub → New repository** (`aurora-agenda`, privado). O arquivo `.bundle` acompanha este pacote; ele é um repositório Git completo em um único arquivo.
+
+**B) Pela interface do GitHub**
+
+Crie o repositório vazio e use **Add file → Upload files** com o conteúdo da pasta `aurora-agenda-saas` (sem `node_modules`, sem `dist`, sem `data/aurora`, sem `.env`). O `Upload files` aceita arrastar uma pasta inteira.
+
+Em ambos os casos, o repositório já traz `.github/workflows/ci.yml`: cada push roda os 73 testes e o build no GitHub Actions. Se aparecer ❌ antes de publicar, não publique.
+
 ## Opção 1 — Render (mais rápido)
 
-1. Suba o conteúdo deste pacote em um repositório (sem `node_modules`, sem `data`, sem `.env`).
+1. Use o repositório criado no **Passo 0**.
 2. No Render: **New → Blueprint** e escolha o repositório. O `render.yaml` cria **dois** recursos: o serviço Docker e um PostgreSQL gerenciado; a `DATABASE_URL` é injetada automaticamente.
 3. Depois do primeiro deploy, em **Environment**, preencha:
    - `APP_ORIGIN` = `https://SEU-SERVICO.onrender.com` (sem barra no fim);
@@ -133,6 +154,7 @@ WantedBy=multi-user.target
 | `WHATSAPP_MODE` | `disabled` até a integração estar pronta; depois `live` |
 | `META_APP_SECRET` | Obrigatória quando `WHATSAPP_MODE=live` (assinatura do webhook) |
 | `META_WEBHOOK_VERIFY_TOKEN` | Só quando o WhatsApp real estiver ativo |
+| `SMTP_URL` / `MAIL_FROM` | Necessárias para "esqueci minha senha" enviar e-mail de verdade |
 
 Opcionais relevantes: `DB_POOL_MAX` (10), `DB_CONNECT_RETRIES` (15), `DB_STATEMENT_TIMEOUT_MS` (30000), `WORKER_MAX_ATTEMPTS` (5), `WORKER_INTERVAL_MS` (15000), `MIGRATE_ON_START` (`true`), `APP_VERSION` (aparece no `/api/ready`).
 
@@ -175,6 +197,10 @@ Use `/api/ready` no healthcheck do provedor (Docker, Render, Fly). Assim o tráf
 - Janela vencida (lembrete com mais de 30 min de atraso), consulta cancelada ou consentimento retirado → `skipped`, sem chamar a Meta.
 - O worker publica sinal de vida em `worker_heartbeats`; `/api/ready` fica 503 (`checks.worker=false`) se ele parar com `WHATSAPP_MODE=live`.
 
+## E-mail para redefinição de senha
+
+Sem SMTP configurado a aplicação funciona, mas o link de redefinição não é entregue. Configure `SMTP_URL` (por exemplo `smtps://usuario:senha@smtp.seuprovedor.com:465`) e `MAIL_FROM`. Provedores comuns aceitam SMTP autenticado; alguns exigem senha de aplicativo em vez da senha da conta. Teste depois do deploy em `/esqueci-senha` com o seu próprio e-mail — se o log mostrar `mail.failed`, o problema é credencial/porta do provedor, não a aplicação.
+
 ## Backup
 
 **Banco gerenciado** — use o backup automático do provedor (Render/Railway/Fly/Neon têm retenção configurável) e teste uma restauração antes de depender dele. Um dump lógico manual:
@@ -211,5 +237,5 @@ pg_restore --clean --if-exists --no-owner -d "$DATABASE_URL" aurora-2026-10-29.d
 - `dist/` compilado — não é necessário rodar o build no servidor.
 - `server/` (API, regras, fila, segurança), `server/migrations/` (esquema versionado) e `server/migrate-cli.js`.
 - `Dockerfile`, `docker-compose.yml`, `render.yaml`, `fly.toml`, `.env.example`.
-- `tests/` com 64 verificações, incluindo **PostgreSQL real pelo driver `pg`**, migrações e a fila (retry, dead-letter, entrega ambígua).
+- `tests/` com 73 verificações, incluindo **PostgreSQL real pelo driver `pg`**, migrações e a fila (retry, dead-letter, entrega ambígua).
 - Sem `node_modules`, sem banco local, sem chave de criptografia e sem dados de demonstração.

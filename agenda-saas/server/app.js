@@ -5,6 +5,12 @@ import { z } from "zod";
 import { randomUUID, randomBytes } from "node:crypto";
 import { one, many, transaction, httpError, audit, isTransient } from "./db.js";
 import { accessLog, logger } from "./logger.js";
+import {
+  requestPasswordReset,
+  confirmPasswordReset,
+  inspectResetToken,
+  ResetError,
+} from "./password-reset.js";
 import { APP_VERSION } from "./version.js";
 import { migrationStatus } from "./migrate.js";
 import {
@@ -94,6 +100,13 @@ const loginSchema = z
   .strict();
 const registerSchema = z
   .object({ workspace: name, name, email, password, privacy: z.literal(true) })
+  .strict();
+const forgotSchema = z.object({ email }).strict();
+const resetSchema = z
+  .object({ token: z.string().min(20).max(200), password })
+  .strict();
+const inspectResetSchema = z
+  .object({ token: z.string().min(20).max(200) })
   .strict();
 const hoursSchema = z
   .array(
@@ -285,6 +298,8 @@ export function createApp(db, { dev = false } = {}) {
     }),
   );
   const authLimiter = dbRateLimit(db, "auth", 20, 15 * 60000);
+  // Redefinição é alvo fácil de abuso (spam de e-mail e força bruta): mais apertado.
+  const resetLimiter = dbRateLimit(db, "reset", 6, 15 * 60000);
   const bookLimiter = dbRateLimit(db, "booking", 12, 15 * 60000);
   const lookupLimiter = dbRateLimit(db, "lookup", 20, 15 * 60000);
   const cookieName =
@@ -338,6 +353,41 @@ export function createApp(db, { dev = false } = {}) {
       res.json({ ok: true });
     } catch (e) {
       next(e);
+    }
+  });
+  app.post("/api/auth/forgot", resetLimiter, async (req, res, next) => {
+    try {
+      const input = forgotSchema.parse(req.body);
+      // Resposta idêntica exista ou não a conta: não vaza quem tem cadastro.
+      await requestPasswordReset(db, input.email).catch((error) =>
+        logger.error("password_reset.request_failed", { error }),
+      );
+      res.json({
+        ok: true,
+        message:
+          "Se este e-mail tiver conta, enviamos um link para redefinir a senha.",
+      });
+    } catch (e) {
+      next(e);
+    }
+  });
+  app.post("/api/auth/reset/inspect", resetLimiter, async (req, res, next) => {
+    try {
+      const input = inspectResetSchema.parse(req.body);
+      res.json(await inspectResetToken(db, input.token));
+    } catch (e) {
+      next(e);
+    }
+  });
+  app.post("/api/auth/reset", resetLimiter, async (req, res, next) => {
+    try {
+      const input = resetSchema.parse(req.body);
+      await confirmPasswordReset(db, input.token, input.password);
+      res.json({ ok: true });
+    } catch (e) {
+      next(
+        e instanceof ResetError ? httpError(e.status, e.message, e.code) : e,
+      );
     }
   });
   app.post("/api/auth/demo", authLimiter, async (req, res, next) => {
