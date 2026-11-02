@@ -1,28 +1,37 @@
-# Site da Gabriela Sousa — entrega de 02/11/2026
+# Site da Gabriela Sousa — entrega de 02/11/2026 (versão 2)
 
-`site-gabriela-2026-11-02.zip` é o site pronto para publicar no Netlify.
+`site-gabriela-2026-11-02-v2.zip` é o site pronto para publicar no Netlify.
 
-## O que mudou nesta versão
+## O que mudou nesta versão (v2)
 
-1. **Fotos novas**, as duas enviadas pela Gabriela:
-   - topo (hero): busto recortado, com contorno branco suave e transparência;
-   - seção "Espaço" (nova): foto dela sentada no consultório;
-   - seção "Sobre": retrato com fundo de estúdio claro.
-2. **Foto do topo bem maior**: recorte 858 × 1084 (só a pessoa, sem margem
-   transparente sobrando), coluna direita com até 700 px de largura.
-3. **Fundo do topo com efeito 3D**: duas camadas do símbolo do infinito
-   andando em velocidades diferentes (620 px desfocada a 70 s + 360 px nítida
-   a 34 s) e símbolo com sombra projetada, brilho e contorno claro.
-4. **Bordô mais suave**: degradê `#84183A → #61102A → #480C1E` e véu de leitura
-   mais leve, para o símbolo voltar a aparecer.
-5. As imagens saíram do base64: agora são arquivos em `assets/` (o `index.html`
-   caiu de ~780 KB para ~51 KB).
+1. **Menu rápido radial** (canto inferior direito): botão flutuante em vinho
+   escuro `#4A0E17` que se transforma num círculo central e abre, em leque,
+   cinco atalhos — **Agendar** (abre a página de horários), **Serviços**,
+   **Atendimento**, **Valores** e **Contato**. Fecha com `Esc`, clique fora ou
+   ao escolher um atalho; respeita "reduzir movimento" do sistema.
+2. **Acesso ao painel de confirmações**: link discreto no rodapé do site
+   ("Área da Gabriela — confirmar horários") e no rodapé da página de agenda
+   ("É a Gabriela? Abrir o painel"). O painel continua protegido por token.
+3. **Botão do WhatsApp** foi para a esquerda (acima do "voltar ao topo") para
+   não disputar o canto com o menu rápido.
+4. Nada do que já existia foi removido: hero, fotos, seções, agenda e painel
+   seguem iguais.
 
 ## Como publicar
 
 1. Baixe o ZIP (ou arraste a pasta `site/` depois de descompactar).
 2. Acesse https://app.netlify.com/drop e arraste o ZIP.
-3. Pronto: o `index.html` é a home, e o Netlify aplica os cabeçalhos do `netlify.toml`.
+3. Pronto: o `index.html` é a home e o Netlify aplica os cabeçalhos do `netlify.toml`.
 
-O link do painel (`admin.html`) não está neste pacote de propósito — peça o
-token atualizado no arquivo `PAINEL-DA-GABRIELA.txt` do Google Drive.
+## Acesso da Gabriela ao painel
+
+O painel é a página `admin.html` do próprio site. Ela entra de duas formas:
+
+- link direto com o token no final (`https://SEU-SITE/admin.html#TOKEN`);
+- ou abrindo `admin.html` e colando o token no campo "Link ou token de acesso".
+
+**O token não fica escrito neste repositório (que é público).** Ele está no
+arquivo `ACESSO-PAINEL-GABRIELA.txt`, na pasta "Claude Projetos" do Google Drive.
+
+Para lembrar: o token é guardado no banco só como *hash* — quem não tem o token
+não entra, e o token nunca viaja pela rede.
